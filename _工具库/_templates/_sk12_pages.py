@@ -15,9 +15,17 @@ PNG = os.path.join(W, "pages")
 os.makedirs(PDF, exist_ok=True)
 os.makedirs(PNG, exist_ok=True)
 
-SOFFICE = r"C:\Program Files\LibreOffice\program\soffice.exe"
-if not os.path.exists(SOFFICE):
-    SOFFICE = r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+# 逐个候选路径**都要**存在性校验：早期写法只校验 64 位路径，缺失时直接换成
+# x86 路径却不复查 ⇒ 拿着不存在的 exe 去 subprocess.run（报错难定位）。
+SOFFICE = None
+for _c in (r"C:\Program Files\LibreOffice\program\soffice.exe",
+           r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
+    if os.path.exists(_c):
+        SOFFICE = _c
+        break
+if not SOFFICE:
+    print("NO_SOFFICE: LibreOffice not found (need soffice.exe)")
+    raise SystemExit(2)
 
 docx = T.docx()
 r = subprocess.run([SOFFICE, "--headless", "--convert-to", "pdf", "--outdir", PDF, docx],

@@ -12,6 +12,8 @@
   4 local-paths    入库文件不含本机绝对路径
   5 balance-smoke  _sk_balance.py 对合成语料判对（守恒 0 bad / 不守恒 1 bad）
   6 info-roundtrip _sk_info.py 在临时输入夹 init→check 全链路可用（env 模式，不碰真数据）
+  7 deps           运行期外部依赖：olefile / Pillow / PyMuPDF / LibreOffice / 中文字体
+  8 self-contain   SOP 必读清单的文件都在工程内（无外部路径依赖）
 
 用法：<py> _chk_selftest.py [--verbose]
 """
@@ -107,6 +109,66 @@ def check_info_roundtrip():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def check_deps():
+    """运行期外部依赖：3 个 pip 包 + LibreOffice（+ 中文字体）。
+
+    这些缺失原本要到 S3/S4/S9 才炸（ImportError / FileNotFoundError 裸栈），
+    放在体检里可在开工第 0 步就暴露（U196）。
+    """
+    import importlib
+    miss = []
+    vers = []
+    for mod, label in (("olefile", "olefile"), ("PIL", "Pillow"),
+                       ("fitz", "PyMuPDF"), ("pymupdf", "pymupdf")):
+        try:
+            m = importlib.import_module(mod)
+            v = getattr(m, "__version__", None) or getattr(m, "version", None) or "?"
+            vers.append("%s=%s" % (label, v))
+        except Exception:
+            miss.append(label)
+    soffice = None
+    for c in (r"C:\Program Files\LibreOffice\program\soffice.exe",
+              r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
+        if os.path.isfile(c):
+            soffice = c
+            break
+    if not soffice:
+        miss.append("LibreOffice(soffice)")
+    # 中文字体：LibreOffice 渲染含中文的 WMF 时需要
+    fontdir = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+    cjk = any(fontdir.glob(p) for p in ("simhei.ttf", "simsun.ttc", "msyh.ttc"))
+    detail = "%s | soffice=%s | cjk_font=%s" % (
+        ",".join(vers) or "-", "ok" if soffice else "MISSING", "ok" if cjk else "MISSING")
+    if miss:
+        return False, "MISSING " + ",".join(miss) + " | " + detail
+    return True, detail
+
+
+def check_selfcontain():
+    """自包含体检：SOP 必读清单里的文件必须**都在工程内**（U196）。
+
+    2026-10-07 前这些文件在工程外的「课后题」工作区，SOP 引用的是外部路径；
+    迁入后本项确保不再回退（少一个即说明又产生了外部依赖）。
+    """
+    req = ["_skill规划.md", "_skill经验归档.md", "_启动提示词.md", "_基线指纹.json",
+           "_工具库/README.md", "_工具库/_templates/README.md",
+           "_规范/转换规范（优化版）.md",
+           "_样板/专题13 氮及其化合物（解析版）.md",
+           "_历史批次/氮/_批次经验归档.md",
+           "_历史批次/氮/_收官复核_20260919.md"]
+    for b in ("钠", "氯", "硫", "氮"):
+        for n in ("_批次规划.md", "_批次进度.md", "_批次经验归档.md"):
+            req.append("_历史批次/%s/%s" % (b, n))
+    miss = [r for r in req if not (ROOT / r).is_file()]
+    imgdir = ROOT / "_样板/images"
+    nimg = len(list(imgdir.iterdir())) if imgdir.is_dir() else 0
+    if nimg == 0:
+        miss.append("_样板/images/*")
+    if miss:
+        return False, "MISSING %d: %s" % (len(miss), ", ".join(miss[:4]))
+    return True, "required=%d sample_images=%d" % (len(req), nimg)
+
+
 CHECKS = [
     ("1 compile", check_compile),
     ("2 baseline", check_baseline),
@@ -114,6 +176,8 @@ CHECKS = [
     ("4 local-paths", check_local_paths),
     ("5 balance-smoke", check_balance),
     ("6 info-roundtrip", check_info_roundtrip),
+    ("7 deps", check_deps),
+    ("8 self-contain", check_selfcontain),
 ]
 
 

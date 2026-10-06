@@ -1,0 +1,6 @@
+== _迁移外部资料 ==
+src: <工作区>
+plan_items=72
+
+by_kind: archive=4, plan=4, progress=4, review=1, sample=1, sample-img=57, spec=1
+copied=72 skipped(same)=0 missing=0 bad=0 sanitized_hits=0

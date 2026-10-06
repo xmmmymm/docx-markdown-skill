@@ -120,9 +120,14 @@ Set-Location "<输出目录>\work"
 ## 五、改库后的体检（一条命令）
 
 ```powershell
-<py> ..\_chk_selftest.py        # exit 0 = 全绿；6 项：编译/基线/提示词一致/脱敏/守恒冒烟/信息表往返
+<py> ..\_chk_selftest.py        # exit 0 = 全绿；7 项：编译/基线/提示词一致/脱敏/守恒冒烟/信息表往返/外部依赖
 <py> _sk0_baseline.py --write   # 改了 CORE 或新增脚本后重登记指纹（新增脚本也算漂移，U190）
 ```
+
+> **外部依赖可在体检里一次查清（U196）**：`_chk_selftest.py` 第 7 项检查
+> `olefile` / `Pillow` / `PyMuPDF` 是否可导入、LibreOffice `soffice.exe` 是否在位、
+> 系统是否有中文字体。这三样原本要到 S3/S4/S9 才炸（ImportError 裸栈），
+> 现在开工第 0 步即可发现。安装见工程根 `requirements.txt`。
 
 > **进度回填已根治（U190）**：`_sk_info.py sync` 现在把 `status`/`done_date`/`counts`
 > 三列**一律从信息表复读**写进 `queue.json`，并保留 `_target.txt` 第 3 行（当前件 stem）。

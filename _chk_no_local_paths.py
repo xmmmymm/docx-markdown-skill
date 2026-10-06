@@ -13,11 +13,14 @@ import sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # 本机特征串（转义与未转义两种形态都覆盖）
+# ⚠ 一律用 re.IGNORECASE 匹配：盘符大小写混用（`d:\Desktop` 与 `D:\Desktop`）
+#   是真实存在的情形，早期版本只写大写 D ⇒ 小写形态整片漏网（U195）。
 PATTERNS = [
-    r"D:\\\\?Desktop",            # D:\Desktop / D:\\Desktop
-    r"C:\\\\?Users\\\\?Administrator",
+    r"[A-Z]:\\\\?Desktop",                  # D:\Desktop / D:\\Desktop / d:\Desktop
+    r"[A-Z]:\\\\?Users\\\\?Administrator",
     r"\.workbuddy",
     r"\\\\?Desktop\\\\?[^\\\s\"']*学位论文",
+    r"[A-Z]:\\\\?[^\\\s\"']*课后题",          # 本工程的历史工作区
 ]
 SKIP_PARTS = {".git", "__pycache__"}
 
@@ -39,21 +42,22 @@ def tracked_files():
 
 def main():
     hits = 0
-    # 本脚本自身持有这些特征串（PATTERNS 就是它的规则），须排除，否则自触发误报
-    SELF = os.path.basename(__file__)
+    # 本脚本与迁移脚本**按设计**持有这些特征串（一个是检测规则，一个是替换规则），
+    # 须排除，否则自触发误报。这是白名单而非漏洞：两者的字符串都是正则字面量。
+    PATTERN_HOLDERS = {os.path.basename(__file__), "_迁移外部资料.py"}
     for f in tracked_files():
         if not os.path.isfile(f):
             continue
         if any(p in f for p in SKIP_PARTS) or f.endswith((".pyc", ".pyo")):
             continue
-        if os.path.basename(f) == SELF:
+        if os.path.basename(f) in PATTERN_HOLDERS:
             continue
         try:
             txt = io.open(f, encoding="utf-8").read()
         except (UnicodeDecodeError, OSError):
             continue
         for pat in PATTERNS:
-            for m in re.finditer(pat, txt):
+            for m in re.finditer(pat, txt, re.IGNORECASE):
                 ln = txt.count("\n", 0, m.start()) + 1
                 rel = os.path.relpath(f, ROOT)
                 print("HIT %s:%d %s" % (rel, ln, m.group(0)[:40]))
