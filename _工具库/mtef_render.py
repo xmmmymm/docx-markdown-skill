@@ -300,7 +300,9 @@ class P:
             l = lmap.get(var & 3, "("); r = lmap.get((var >> 4) & 3, ")")
             return l + (nz[0] if nz else "") + r
         if name == "ROOT":
-            if var == 0 or len(nz) == 1:
+            # 槽位可能全空（nz==[]）：旧写法 len(nz)==1 兜不住空表，会 nz[0] IndexError
+            # （被 main 的 except 吞掉 ⇒ 该对象降级为 ⟨MISSING⟩、公式丢失）
+            if var == 0 or len(nz) < 2:
                 return "√" + (nz[-1] if nz else "")
             idx = to_script(nz[0], SUP_MAP, "sup")
             return idx + "√" + nz[1]
@@ -582,8 +584,8 @@ def main():
     print("all_formulas.txt written")
     print("templates:", LOG["templates"])
     print("unknown_pua:", LOG["unknown_pua"])
-    print("unconv sub:", LOG["unconvertible_sub"])
-    print("unconv sup:", LOG["unconvertible_sup"])
+    print("unconv sub:", ascii(LOG["unconvertible_sub"]))
+    print("unconv sup:", ascii(LOG["unconvertible_sup"]))
     for k, v in list(LOG["failures"].items())[:10]:
         print("FAIL", k, v)
 

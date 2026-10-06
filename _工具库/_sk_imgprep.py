@@ -29,7 +29,6 @@ r"""【skill · 反循环机制 1/3】判图卡片预生成（把"读大图"换�
      （缓存 `work\_imgcards\_wmf\`；转换失败则该图卡片标注 `OPEN_FAIL`，由子代理按 U15 用 `dump_wmf2.py` 处置）。
   4) 新增内容外接框 `bbox`（`bw.getbbox()`），便于卡片不足时判断"是否为一条横线/角落小图"。
 """
-import hashlib
 import json
 import os
 import subprocess
@@ -88,6 +87,12 @@ if os.path.isdir(SRC_DIR):
 if not names and os.path.isdir(os.path.join(WORK, "unpacked", "word", "media")):
     SRC_DIR = os.path.join(WORK, "unpacked", "word", "media")
     names = [f for f in sorted(os.listdir(SRC_DIR)) if f.lower().endswith(exts)]
+# 源目录缺失或一张图都没有时必须报错退出：否则 CARDS=0 与"本文档确实无图"
+# 无法区分，会把「S1 未跑 / OUT 指错」静默当成成功（下游 S4 判图范围因此为空）。
+if not names:
+    sys.stderr.write("BAD no images under %s (S1 not run, or wrong OUT?)\n"
+                     % SRC_DIR.encode("unicode_escape").decode("ascii"))
+    sys.exit(2)
 
 
 def find_soffice():

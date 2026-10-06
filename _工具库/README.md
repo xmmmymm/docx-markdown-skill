@@ -70,10 +70,10 @@ Task(
 
 | 脚本 | 职责 | 用法 |
 |---|---|---|
-| `_sk_info.py` | **输入夹「提取信息表」读写与同步**（开工第 0 步）：表＝`<输入夹>\_提取信息.md`（Markdown 表格，人可读可手改），固化 **skill 位置／输出根目录／批次名／特殊约定／逐件进度** ⇒ 该文件夹后续在新对话中**无需重填**（缺项才补问） | `<py> _sk_info.py check`（exit 0=可开工／3=无表须 init+询问／4=缺必填须补问）<br>`init`（生成骨架）／`sync`（新增件自动入队＋刷新 `_target.txt` 前两行＋写队列）／`status --index N --set done` |
+| `_sk_info.py` | **输入夹「提取信息表」读写与同步**（开工第 0 步）：表＝`<输入夹>\_提取信息.md`（Markdown 表格，人可读可手改），固化 **skill 位置／输出根目录／批次名／特殊约定／逐件进度** ⇒ 该文件夹后续在新对话中**无需重填**（缺项才补问） | `<py> _sk_info.py check`（exit 0=可开工／3=无表须 init+询问／4=缺必填须补问／6=表解析异常已拒写）<br>`init`（生成骨架）／`sync`（新增件自动入队＋刷新 `_target.txt` 前两行＋写队列）／`status --index N --set done` |
 | `scan_input.py` | **扫描输入夹第一层 .docx → 生成批次队列 json**（`queue/stem/src_abs/out_abs/size`，逐字照抄文件名；`.doc` 等报告跳过）；函数 `scan()` 供 `_sk_info.py` 复用（队列口径单一真源） | `<py> scan_input.py`（三要素读 `_target.txt`；详见 `_templates\README.md`） |
-| `_sk_balance.py` | S9 独立守恒复算（U64/U91 三桶归因；变量水合物/方括号配位已并入⑧）；**须核退出码=0**（U119） | `<py> _sk_balance.py "<成品 md 路径>"` |
-| `_sk_imgprep.py` | **反循环 1/3 · 判图卡片**：每图压成 2–3 KB 文本卡片（尺寸/暗像素/空白判定/84×30 ASCII 网格/16×16 签名 + 同图聚类）→ `work\_imgcards\`；含 U133 透明底先合成白底 | `<py> _sk_imgprep.py "<输出目录>" --grid 84x30` |
+| `_sk_balance.py` | S9 独立守恒复算（U64/U91 三桶归因；变量水合物/方括号配位已并入⑧）；**须核退出码=0**（U119；2=路径不存在） | `<py> _sk_balance.py "<成品 md 路径>"` |
+| `_sk_imgprep.py` | **反循环 1/3 · 判图卡片**：每图压成 2–3 KB 文本卡片（尺寸/暗像素/空白判定/84×30 ASCII 网格/16×16 签名 + 同图聚类）→ `work\_imgcards\`；含 U133 透明底先合成白底。**源目录无图 ⇒ exit 2**（防「S1 未跑」被当成「本文档无图」） | `<py> _sk_imgprep.py "<输出目录>" --grid 84x30` |
 | `_sk_watchdog.py` | **反循环 3/3 · 看门狗**：磁盘增长轮询，零增长/污染源/单图自旋 ⇒ `STALLED`（退出码 3）；污染判据**前缀/后缀精确匹配** | `<py> _sk_watchdog.py "<输出目录>" --interval 120 --times 40 --stall 4` |
 | `_sk0_baseline.py` | **基线漂移检测**：与 `..\_基线指纹.json` 比对全部 CORE 脚本 MD5（防手滑改坏；改 CORE 须登记指纹） | `<py> _sk0_baseline.py`（开工/收尾各一次） |
 
@@ -116,3 +116,16 @@ Set-Location "<输出目录>\work"
 - **载体五形态不可按同族外推**（U49）：每件必跑三连判 `probe_omml`+`probe_special`+`probe_ole`；
 - **同图判定不可只靠 md5**（U68）；**低分辨率方向性结论须 `zoom_profile.py` 像素剖面**（U39）；
 - **回改已交付件**：改源头脚本 → 重跑 S5–S8 → 复跑 `audit.py` 至 `FAILS: 无`（U28/U40）。
+
+## 五、改库后的体检（一条命令）
+
+```powershell
+<py> ..\_chk_selftest.py        # exit 0 = 全绿；6 项：编译/基线/提示词一致/脱敏/守恒冒烟/信息表往返
+<py> _sk0_baseline.py --write   # 改了 CORE 或新增脚本后重登记指纹（新增脚本也算漂移，U190）
+```
+
+> **进度回填已根治（U190）**：`_sk_info.py sync` 现在把 `status`/`done_date`/`counts`
+> 三列**一律从信息表复读**写进 `queue.json`，并保留 `_target.txt` 第 3 行（当前件 stem）。
+> 历史教训 U164/U168/U177 描述的"每次 sync 清空进度、须另跑按件回填脚本"**不再复现**。
+> 另：写表前有**守恒守卫**（解析行数 ≠ 原文像数据行的行数 ⇒ 拒绝改写并 exit 6）
+> 与 `.bak` 首次备份，防止备注里混入 `|` 等导致整表被残缺重写。

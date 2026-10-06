@@ -18,7 +18,6 @@ r"""【skill · 反循环机制 3/3】看门狗：按**磁盘事实**判停摆�
 产物：`<输出目录>\work\_watchdog_out.txt`（UTF-8）；stdout 仅 ASCII。
 退出码：0=正常（有增长） / 3=STALLED（建议换棒）
 """
-import hashlib
 import os
 import sys
 import time
@@ -57,7 +56,9 @@ def snapshot(root):
             try:
                 st = os.stat(p)
                 snap[os.path.relpath(p, root)] = (st.st_size, int(st.st_mtime))
-            except Exception:
+            except OSError:
+                # 遍历期间文件被删除/占用属正常竞态，跳过即可。
+                # 收窄到 OSError（原为裸 Exception:pass，会连逻辑错误一并吞掉）
                 pass
     return snap
 

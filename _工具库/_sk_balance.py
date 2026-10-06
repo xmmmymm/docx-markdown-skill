@@ -25,6 +25,14 @@ else:
     here = Path(__file__).resolve().parent          # <输出目录>\work
     outdir = here.parent
     MD = outdir / (outdir.name + ".md")
+# 路径不存在时须给用法并以 2 退出（旧版直接 read_text ⇒ FileNotFoundError 裸栈）。
+# 注意：stderr 亦须纯 ASCII（U2/U90，GBK 终端会吞中文）⇒ 用法行用英文。
+if not MD.is_file():
+    sys.stderr.write("BAD md not found: %s\n"
+                     % MD.name.encode("unicode_escape").decode("ascii"))
+    sys.stderr.write("usage: _sk_balance.py <path-to-final.md>\n"
+                     "       (omit arg => <parent-of-work>\\<dirname>.md)\n")
+    sys.exit(2)
 stem = MD.stem
 
 txt = MD.read_text(encoding="utf-8", errors="replace")
@@ -38,7 +46,7 @@ WHITE = "\u00a0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200
 #   （unparsed 桶），**不再**因段被 `·` 切开而漏检/误判左右差 x 项的假阳性。
 FC_RE = re.compile(r"[0-9A-Za-z₀-₉⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻()\[\]↑↓+·∙⋅]")
 SUB = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
-SUP = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻", "0123456789+-")
+# 注：SUP 曾在此定义但从未使用（上标由下面的"电荷剥离 + SUB"两步消化），已删。
 
 
 def strip_noise(s):
@@ -182,22 +190,6 @@ def read_group(s, i):
         if i == before:      # ELEM 匹配空串 ⇒ 未前进，退出防死循环
             return None, i
     return d, i
-
-
-def top_split(s):
-    out, depth, cur = [], 0, ""
-    for ch in s:
-        if ch in "([":
-            depth += 1
-        elif ch in ")]":
-            depth -= 1
-        if ch == "+" and depth == 0:
-            out.append(cur)
-            cur = ""
-        else:
-            cur += ch
-    out.append(cur)
-    return out
 
 
 lines = txt.split("\n")

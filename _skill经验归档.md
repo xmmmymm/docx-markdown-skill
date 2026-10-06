@@ -4,7 +4,7 @@
 > **继承说明**：通用改进清单 **U1–U142** 全量继承自四批工程终态（钠 10／氯 9／硫 10＋1⏭／氮 15），
 > 真源＝`<批次数组>\氮\氮\_批次经验归档.md`（顶部「通用改进清单」，
 > 含 U1–U142 逐条全文与各件「归档 1–15」「复核 1」），**开工前必须逐条读、逐条遵守**；
-> 本文件只登记 **skill 轮新增/变更** 条目（编号 **从 U143 续编**，当前至 **U189**），避免与真源两版漂移。
+> 本文件只登记 **skill 轮新增/变更** 条目（编号 **从 U143 续编**，当前至 **U194**），避免与真源两版漂移。
 > **回写规则**（详见 `_skill规划.md` 第六节）：改 `_工具库\` 通用脚本须 ① 过 U35 回归 →
 > ② 在本文件追加「工具库改动」条目 → ③ 跑 `_工具库\_sk0_baseline.py --write` 重新登记指纹。
 
@@ -65,6 +65,11 @@
 | **U187** | **「真源 → 派生物」的文档对，派生物必须配套机器校验器**，否则两版必然漂移。本工程 `_启动提示词.md` 由 `_sk7_genprompt.py` 从 `_skill规划.md` §10 抽取，规划第六节.5 只规定了"先同步再输出"，**漂移判据此前仅靠人工比对**。本轮新增 `_chk_prompt_drift.py`（stdout ASCII、逐行 diff、**非零退出码**）把它变成可 CI 化判据。 | 开源发布轮（**2026-10-07 新增**）：改规划 §10 后验证两版 2646 字符／41 行逐字一致 |
 | **U188** | **`.gitignore` 须显式写出"不要忽略什么"及其理由**，否则后人会误删工程可信根。典型误删对象：`_基线指纹.json`（删则 `_sk0_baseline.py` 漂移检测永久失效、U35 回失去基线）。**通用做法＝在 `.gitignore` 末尾加「注意：以下不要忽略」段并逐条写明理由**，把"踩不得的坑"固化到文件里而非只活在归档中。 | 开源发布轮建 `.gitignore` 时按此写（**2026-10-07 新增**） |
 | **U189** | **脱敏扫描必须覆盖「转义写法」，否则 JSON 类文件会整片漏网**：本工程 `_队列\queue.json` 的 24 处本机路径全部写成 **JSON 转义双反斜杠**形态，**按单反斜杠搜是 0 命中**，极易误判为"已干净"而直接发布。同族盲区：`C:` + 用户名、`\\?\` 前缀、URL 编码、正斜杠写法。**通用做法＝脱敏自查工具按 `git ls-files` 扫「实际入库」文件（而非磁盘全量，否则被 ignore 的产物误报），且模式同时匹配真实反斜杠与转义双反斜杠**（本轮据此补 `_chk_no_local_paths.py`）。**配套教训：被 ignore 的产物不算"已脱敏"，但也绝不能因此把它们提交——正确解法是补进 `.gitignore` 并在文档中写明「如何重建」。** | 开源发布轮实测（**2026-10-07 新增**）：首轮扫描 0 命中 → 复扫 `queue.json` 24 处 |
+| **U190** | **「权威表 + 派生文件」两层结构下，派生动作必须每次从权威源全量重算，不能"只补它记得的那一列"**：`queue.json` 的 `status`/`done_date`/`counts` 三列全部来自 `<输入夹>\_提取信息.md`；历史 `sync` 只注入 `status`，于是每次重建都清掉另两列，被迫再写按件回填脚本，形成 U164→U168→U177 三轮反复。**根治点＝让派生成为纯函数（表 → 文件），而非增量补丁。** 同时 `_target.txt` 第 3 行（当前件 stem）也须"改写前取走、原样写回"，否则每次 sync 都清空它。 | 全面优化轮实测（**2026-10-07 新增**）：修复前 `done_date=0 counts=0`，修复后三列齐 |
+| **U191** | **"读-改-写"人可编辑的权威文件前，必须做「解析守恒校验」，且基准要取未被本次操作污染的旧快照**：`parse()` 只认固定列数的行、无法识别的行被静默丢弃，而 `render()` 会按残缺结果**整表重写** ⇒ 备注里混一个 `\|` 就能无声抹掉一条进度，被丢的行还让 `status --index N` 编号整体错位。**做法＝写前比较「原文像数据行的行数」与「解析出的行数」，不等则拒写（非零退出）并留 `.bak`。** ⚠ **基准必须是「改动前」的解析行数**——本轮初版拿"追加新行之后"的行数比，导致**每次发现新文件都误判丢行而拒绝写入**（把工具的核心职责挡死），由评审者指出后修正。 | 全面优化轮实测（**2026-10-07 新增**）：守卫对"新增件"放行、对"备注含竖线"拒绝且原文件字节不变 |
+| **U192** | **「只在坏情形打印」的调试语句，其内容也必须满足 stdout ASCII 铁律**：本轮三路评审的高危项里，`make_skeleton` 的 `ole_dup`、`extract_content` 的 `eqraw`、`mtef_render` 的 `unconv` **都是只在异常/可疑情形才输出的打印**，平时不触发、一触发就打化学式/条件词 ⇒ `UnicodeEncodeError`（GBK 终端）。**即"判据恰在需要它的那一刻失效"。** 修法：`ascii()` / `json.dumps(..., ensure_ascii=True)`。**通用教训：静默降级分支既要有落盘计数（U172），其打印也要 ASCII 安全。** | 全面优化轮实测（**2026-10-07 新增**）：`print("ole_dup:", [["oleObject12","m₃−m₁"]])` 复现 `UnicodeEncodeError '\u2083'` |
+| **U193** | **静态体检（未用 import／死代码／静默吞异常／跨文件重名）应做成可复跑工具**：本轮新增 `_audit_static.py`，一次扫出 5 处未被引用的模块级符号、1 处裸 `except`、1 处跨文件重名。**5000 行量级的工程，死代码靠人眼必漏；把体检脚本留在库里，下一轮直接复跑。** ⚠ **判定工具自身有坑**：PowerShell `Select-String -Pattern '\bV\b'` **默认大小写不敏感**，会把小写 `v`（`for k, v in ...`）一并命中，误报"常量在用"；须以 Python `re.findall(r'\bV\b')` 为准。 | 全面优化轮新增 `_audit_static.py`（**2026-10-07 新增**） |
+| **U194** | **凡"每次都要记得做"的检查，迟早会被漏掉；落成一条命令 + 非零退出码才算真正的纪律**：本工程原要求改库前跑「编译＋基线＋提示词一致＋脱敏＋冒烟」五件事，全靠人记；本轮新增 `_chk_selftest.py`（6 项，exit 0=全绿）把它变成可自动化判据，**且它立刻抓到本轮改 CORE 后未重登记的指纹**（`CHANGED audit.py`）。 | 全面优化轮新增 `_chk_selftest.py`（**2026-10-07 新增**）：`RESULT=ALL GREEN passed=6/6` |
 
 ---
 
@@ -661,4 +666,95 @@
 2. **三个载体已 gitignore**（`_target.txt` / `queue.json` / `docx_list.json` 等）：本机文件仍在、不影响继续开工；但**新克隆仓库时它们不存在**，需先 `_sk_info.py check`→（无表则 `init` 填表）→`sync` 重建，详见 `README.md` 快速开始。
 3. 改 `_skill规划.md` §10 后的固定动作：`python _工具库\_templates\_sk7_genprompt.py` → `python _chk_prompt_drift.py`（U187）。
 4. **发布/分享前固定动作**：`python _chk_no_local_paths.py`（须 `HITS=0`，U189）——它按 `git ls-files` 扫实际入库文件，并覆盖 JSON 转义写法。
+
+---
+
+## 归档 12 · 全面优化轮（2026-10-07）：三路只读评审 + 缺陷修复 + 工程体检器
+
+> 本轮对全工程做了一次**静态 + 语义 + 交叉实现**三路评审（评审者只读、不改文件），
+> 共修复 20 处缺陷，新增 2 个工程工具，并把**未修的库级缺陷逐条登记**（含文件:行号与修法），
+> 供后续专门的 U35 回归轮处理。**本轮改动了 12 个 CORE/专属脚本** ⇒ 已重登记 `_基线指纹.json`。
+
+### a) 本轮已修复（逐条，均已实测）
+
+| # | 位置 | 缺陷 | 修法 |
+|---|---|---|---|
+| 1 | `_sk_info.py` `do_sync` | **`sync` 每次清空 `_target.txt` 第 3 行**（当前件 stem）——`write_target` 的 `keep_stem` 参数从未被传值，而 docstring 承诺"保留第 3 行"。归档 U536/U164 记为"第 3 次复现"却始终未根治 | 新增 `target_stem()`，改写前取走、原样写回。**实测哨兵值穿越 sync 存活** |
+| 2 | `_sk_info.py` `do_sync` | `sync` **只注入 `status`**，每次重建 `queue.json` 都清空 `done_date`/`counts`（U164/U168/U177 反复出现，靠按件回填脚本补救，而该脚本不在库内） | 三列**一律从信息表复读**（表是权威源）。实测 `status=10 done_date=10 counts=10` |
+| 3 | `_sk_info.py` `do_sync` | 表的 `输出根目录` 被声明为权威源，实际只信 `_target.txt` 第 2 行 ⇒ 表已填、第 2 行空时 `check` 报"可直接开工"而 `sync` 却 `queue=need_out_root` 并把第 2 行写空（自相矛盾） | 表值有效时以表为准，不一致时 stderr 报 `OUT_ROOT_MISMATCH`（ASCII 转义）。env 模式仍以 `SKILL_TARGET` 为准（测试用） |
+| 4 | `_sk_info.py` 全部写表点 | 读-改-写非原子；`parse()` 静默丢弃无法识别的行后 `render()` **整表重写** ⇒ 备注里混入 `\|` 即无声丢进度，且被丢的行使 `status --index N` 编号错位 | 新增 `atomic_write`（临时文件 + `os.replace`）、`table_guard`（**改动前**解析行数须等于原文"像数据行"行数，否则 exit 6 拒写）、`backup_table`（首次写前留 `.bak`） |
+| 5 | `_sk_info.py` `main` | 未知子命令**落到 `do_check` 并 return 0** ⇒ `sync` 误打成 `syn` 会被当成"检查通过" | 白名单校验，未知子命令 exit 2 |
+| 6 | `_sk_info.py` `parse` | `render()` 写的占位行 `- （无）` 被当真实备注收进 `notes` ⇒ 每轮 `check` 都报一条幽灵「特殊约定」 | 解析时忽略该占位 |
+| 7 | `_sk_info.py` `do_status` | 状态回退（run/todo/skip）时**残留旧完成日期** ⇒ 表里出现"未开始却写着完成日期" | 非 DONE 一律清空日期 |
+| 8 | `scan_input.py` `write_queue` | 非原子重写，与 U184"sync 后复读"冲突（可能读到半截 JSON ⇒ `QUEUE=broken`） | 同 `atomic_write` 模式 |
+| 9 | `scan_input.py` `main` | env 模式**过滤空字段导致错位**：`SKILL_TARGET="in\t\tstem"` ⇒ `out_root` 变成 stem、所有 `out_abs` 全错；且与保位的 `_sk_info.target_lines()` **同变量不同口径** | 保位（空→None）并单独校验第 2 项 |
+| 10 | `scan_input.py` | 中文 stem 打 stdout（违反 ASCII 铁律，GBK 终端会抛 `UnicodeEncodeError`） | 转义输出 |
+| 11 | `make_skeleton.py` | `print("ole_dup:", log["ole_dup"])` 打**渲染后的化学式**（含 `₂₃⁻⇌`）⇒ **恰在 U134/U146 重复检测命中时**崩 `UnicodeEncodeError`（exit 1） | `json.dumps(..., ensure_ascii=True)` |
+| 12 | `make_md.py` | `print("md written:", MD_OUT.name)` 打中文名（今天能跑只因 10 个 stem 恰好 cp936 可编码） | ASCII 转义 |
+| 13 | `extract_content.py` | `print("eqraw:", ...)` 打原始 EQ 域指令（含条件词如 `\s\up 4(空气)`） | `ascii()` |
+| 14 | `mtef_render.py` | `unconv sub/sup` 打以"转换失败字符"为键的字典 | `ascii()` |
+| 15 | `omml_render.render()` | **无 `None` 守卫**，而所有调用点传 `_e(...)`（畸形 OMML 时为 None）⇒ `AttributeError` 冒泡到 `extract_content` 模块级循环（无 try）**整个 S2 在写 `content_stream.txt` 之前中断** | 首行 `if el is None: return ""` |
+| 16 | `mtef_render.py` ROOT | `len(nz)==1` 兜不住 `nz==[]` ⇒ `nz[0]` IndexError，被 `main` 的 except 吞掉、对象降级 `⟨MISSING⟩`（公式丢失） | 改 `len(nz) < 2` |
+| 17 | `extract_content.py` | `int(s[9:])` 遍历 `word/embeddings/` 全部条目 ⇒ 含嵌入式工作簿（`Microsoft_Excel_Worksheet1.xlsx`）或子目录时 **ValueError 裸栈** | 先按 `oleObject*.bin` 过滤再取序号 |
+| 18 | `make_md.py` | 空表（`<TBL>` 紧跟 `</TBL>`）时 `max()` 空序列 ⇒ `ValueError` 裸栈中断 S6 | `if not cells: continue` |
+| 19 | `audit.py` | `os.listdir(DST/"images")` 在 `images\` 缺失时裸栈 ⇒ **"图全丢"这种最该报 FAILS 的情形反而拿不到报告** | 退化为空列表并记 `images目录: MISSING`，自然判 FAILS |
+| 20 | `_sk_balance.py` / `_sk_watchdog.py` / `_sk_imgprep.py` / `_sk0_baseline.py` | ① 路径不存在裸栈（改用法 + exit 2）；② 裸 `except Exception: pass`（收窄为 `OSError`）；③ 源目录无图时 **exit 0 + `CARDS=0`**，把"S1 未跑/OUT 指错"当成"本文档无图"（改 exit 2）；④ **新增脚本不计入失败**，指纹失效率被报成成功（改：`new` 也计入 exit 1 并打印 `--write` 提示） | 见左 |
+
+**同时删除死代码**：`_sk_balance.top_split`（0 引用）、`_s0_census.V`（VML 命名空间常量，实际走正则计数）、`_sk_balance.SUP`（只用了 `SUB`）、`_sk_watchdog`/`_sk_imgprep` 各一处 `import hashlib`、`_题库_sync.CHILD_SUB`（改为真正被 `classify()` 使用，消除硬编码标记串）。
+
+### b) 本轮新增通用经验
+
+| 编号 | 条目 | 为什么（背景） |
+|---|---|---|
+| **U190** | **"进度三列"必须由权威源单向派生，且派生动作要幂等**：`queue.json` 的 `status`/`done_date`/`counts` 全部来自 `<输入夹>\_提取信息.md`，`sync` 每次重建都从表复读。**通用教训：只要存在"权威表 + 派生文件"两层，派生动作就必须每次全量从权威源重算，而不是"只补它记得的那一列"**——历史实现只注入 `status`，于是每次 sync 都清掉另两列，被迫再写一个按件回填脚本，形成 U164→U168→U177 三轮反复。**根治点是让派生变成纯函数（表 → 文件），而不是增量补丁。** | 本轮实测（2026-10-07）：修复前 `status=10 done_date=0 counts=0`，修复后三列齐 |
+| **U191** | **"读-改-写"人可编辑的权威文件前，必须做「解析守恒校验」**：`parse()` 只认固定列数的行，任何无法识别的行都被静默丢弃，而 `render()` 会按残缺结果**整表重写** ⇒ 一行备注里混进 `\|` 就能无声抹掉一条进度，且被丢的行让 `status --index N` 的编号整体错位。**做法：写前比较「原文中像数据行的行数」与「解析出的行数」，不等则拒绝写入（非零退出）并留 `.bak`。** ⚠ **基准必须是「改动前」的解析行数**——若拿"追加新行之后"的行数比，则每次发现新文件都会被误判为丢行而拒绝写入（本轮自查时正是先踩了这个坑，由评审者指出）。**通用教训：守卫的基准量要选"未被本次操作污染"的那个快照。** | 本轮实测：守卫对"新增件"放行、对"备注含竖线"拒绝且原文件不变 |
+| **U192** | **静默降级分支的"无告警"是最高危的一类缺陷，且往往与 ASCII 铁律叠加成崩溃**：本轮三路评审的高危项里，`make_skeleton` 的 `ole_dup` 打印、`extract_content` 的 `eqraw` 打印、`mtef_render` 的 `unconv` 打印**都是"只在异常/可疑情形才输出"的调试打印**，平时不触发、一触发就 `UnicodeEncodeError`（因为打的是化学式/条件词）。**通用教训：① 任何"只在坏情形打印"的语句，其内容也必须满足 stdout ASCII 铁律**（否则判据在需要它的那一刻失效）；② 新增任何"判不出→原样返回"的分支，必须同时落盘计数（U172 同源）。 | 本轮实测（2026-10-07）：`print("ole_dup:", [["oleObject12","m₃−m₁"]])` 复现 `UnicodeEncodeError: 'gbk' codec can't encode '\u2083'` |
+| **U193** | **静态体检（未用 import / 死代码 / 静默吞异常）应做成可复跑工具而非一次性动作**：本轮新增 `_audit_static.py`，一次扫出 5 处未被引用的模块级符号、1 处裸 `except`、1 处跨文件重名，全部为本轮或历轮遗留。**通用教训：5000 行量级的工程，死代码靠人眼必漏；把体检脚本留在库里，下一轮直接复跑即可。** 注意 PowerShell 的 `Select-String -Pattern '\bV\b'` **默认大小写不敏感**，会把小写 `v` 一并命中而误报"常量在用"——判定须以 Python `re.findall(r'\bV\b')` 为准。 | 本轮新增 `_audit_static.py`（2026-10-07） |
+| **U194** | **把分散的门禁收成一条命令，否则"流程纪律"会退化成口头约定**：本工程原本要求改库前跑「编译 + 基线 + 提示词一致 + 脱敏 + 冒烟」五件事，全靠人记；本轮新增 `_chk_selftest.py`（6 项，exit 0=全绿）把它变成可自动化判据，且它**立刻抓到了本轮改 CORE 后未重登记的指纹**。**通用教训：凡"每次都要记得做"的检查，迟早会被漏掉；落成一条命令 + 非零退出码才算真正的纪律。** | 本轮新增 `_chk_selftest.py`（2026-10-07） |
+
+### c) 已确认但**本轮未修**的库级缺陷（须专门 U35 回归轮；逐条含文件:行号与修法）
+
+> 这些均由只读评审给出**代码级证据**，但要么影响面覆盖全语料（须 89 件回归），
+> 要么属于"已知桩/已登记待办"的深化。**勿在件内顺手改**（U81：库规则只向前生效）。
+
+| 优先级 | 位置 | 缺陷（证据） | 建议修法 |
+|---|---|---|---|
+| **高** | `mtef_render.py` MATRIX 分支 | 少读 1 个对齐字节、且分区字节数用 `(rows+1)+(cols+1)` 而非 `ceil((rows+1)/4)+ceil((cols+1)/4)`（对照 mathtype gem `records5/matrix.rb`）⇒ 对象表起点偏移（1×1 差 1 字节、3×3 差 5 字节）。零剩余校验未报警 ⇒ **该分支从未被真实语料触发** | 读 3 个对齐字节 + `(rows+4)//4 + (cols+4)//4`；补一个含矩阵的回归样例 |
+| **高** | `extract_content.py` EQ 域条件箭头 | `c = over or under` 与 `_conds[0]` **只保留第一个条件槽** ⇒ `\o(→,\s\up 7(催化剂),\s\do 5(Δ))` 渲染成 `—催化剂→`（**Δ 丢失**）；`else: out.append(main)` 时两槽全丢。与 U101 同类，违反"三处实现同口径、Δ 恒置末" | 收集全部非箭头非线状槽，走共享 `_cond_join` |
+| **中** | `mtef_render.py` vs `omml_render.py` vs `extract_content.py` | **条件等号三处实现口径不一致**：`_cond_join` 尾集 `("Δ","△")`、`_cond_eq_join` 尾集 `("Δ","△","▵","∆")` 且都不做归一化、`extract_content._cond` 把 △/▲→Δ 却从不 join ⇒ 同一码位 `△` 在三处产出不同结果 | 在 `mtef_render` 建唯一 `_cond_join`（▵/∆/△/▲→Δ、Δ 置末、`、`连接）并供另两处 import |
+| **中** | `omml_render.py` `m:d` | 恒输出圆括号且各 `m:e` 直接相接，**丢弃 `m:begChr`/`m:endChr`/`m:sepChr`** ⇒ 区间 `[0,1]` 渲染成 `(01)`（括号类型与逗号双丢），且无计数（归档 grep 无该登记） | 读 `m:dPr` 三属性（默认 `(`/`)`/`|`）并以 sepChr 连接 |
+| **中** | `normalize.py` vs `audit.py` | **口径不对称 2 处**：① 系数后空格规则 ` +`（1+ 个）会删掉 ≥2 空格，而 audit 孪生规则只认 1 个、政策要求 ≥2 保留（U150/U162/U165 四例同源）；② normalize 的等号旁规则要求**两侧**都在 `_F` 类，audit 只要求一侧 ⇒ `___H₂C₂O₄ =___CO₂↑` 必然假 FAILS（U154 的 `_` 情形） | ① 收窄为恰好 1 个空格或改 NBSP 并补 audit 项；② 把 `_` 等合法相邻字符补进 `_F`，或把 audit 两条放宽为两侧 |
+| **中** | `make_md.py` 封面分支 | 库版默认 `COVER_HEAD=""`/`COVER_CONT=()` ⇒ `startswith("")` 为真，**封面分支对每篇文档首行都触发**，于是①跳过 `sub_fig`（U170 的 FIG 泄漏）②跳过 `<TBL>`/选项/状态机③执行 `re.sub(r"\s+"," ")` **把 NBSP/U+3000 一并压掉**（若 U162 的 NBSP 字段分隔落在首行即被无声摧毁，且 5/9/10 三项都看不见） | 以 `COVER_HEAD` 非空为门；首行也走 `sub_fig`/表格/状态机；或只压 U+0020 |
+| **中** | `audit.py` 门禁空洞 | ① **选项是否在引用块内无任何检查**（第 6 项只看已是 `>` 的行）⇒ 整组选项掉出引用块仍报 `FAILS: 无`；`OPT_RE` 限 `[A-D]` 而 normalize 写 `[A-E]`（U151）⇒ E/F 选项变裸段且全部判据放行；② audit 用**子串**判答案标签、make_md 用**行首锚定**正则 ⇒ `1、【答案】D`/`（1）【答案】D` 被 audit 计入却让 make_md 的 `in_ans=False`，后续 `①/A．` 被误包引用块，且 `ANS_DIFF=1` 逃生舱掩盖之 | ① 增"裸选项行数 == skeleton 选项行数"门禁项；② 两侧统一锚定口径 |
+| **低** | `audit.py` | ① `列一致` 对 make_md 输出恒真（make_md 已补齐列数）⇒ 应改查 skeleton 侧；② 第 7/8 项从不写入 `report` ⇒ `audit_report.json` 缺键（消费者 KeyError）；③ 残留词表里 `⟨FIG`/`⟨MISSING`/`⟨DESC?` 被裸 `⟨` 包含 ⇒ 单次命中计 2–3 次（而该计数是首行头条）；④ `norm_md` 剥 `---`/`**` 而 `norm_skel` 不剥 ⇒ 源文含字面 `---` 时假 FAILS；⑤ `normalize` 的 Unicode 空格类含 `= + ↑ ↓ ⇌` 而**缺 `→`**，audit 第 10 项又是 ASCII-only ⇒ `→` 旁的 U+2000–200A 残留对全部 10 项不可见 | 见左逐条 |
+| **低** | `extract_content.py` | **三处静默丢弃且无计数**：① 正文层非 `w:p`/`w:tbl`/`w:sectPr` 的子元素（如 `w:sdt`）直接跳过；② `cell_text` 只读单元格直接子 `w:p` ⇒ 单元格内嵌套表格整块消失；③ `walk` 无 `w:sym` 分支 ⇒ `<w:sym>` 字符消失（S0 普查显示全语料 `w:sym=0`，属潜伏）。另 `run_tokens` 把同一 run 内 `w:t` 文本先全收再追加 OLE/IMG 占位 ⇒ `a⟨IMG⟩b` 变 `ab⟨IMG⟩`（同 run 内重排） | 逐条补分支并落盘计数 |
+| **低** | `mtef_render.py` | ① `tface` 用 `sint()`（0xFF 转义多读 2 字节）而 gem 用 `int8` ⇒ 潜伏漂移；② `0xF0000 <= cp` 与 `except ValueError` 对 `cp ≤ 0xFFFF` 不可达；③ `cp == 0` 无守卫 ⇒ 可向 `content_stream` 注入 U+0000（无判据扫它）；④ `self.depth` 从未自增/读取（无深度限制）；⑤ `EMBELL_CHARS[24]` 是 6 个点而 emb4DOT 应为 4 个（U+20DC）；⑥ `map_char` 的 `tface` 形参未用；⑦ L147 注释与 `next_nib()` 行为矛盾 | 见左 |
+| **低** | `make_skeleton.py` | ① `seq[-1]` 对空 `IMG_TEXT_SEQ` 抛 IndexError，引用数多于条目时**静默复用最后一项**（无告警）；② `sub_plain`/`sup_plain` 只落 `skeleton_log.json` 从不呈现；③ `open()` 句柄不关（`runpy` 驱动时泄漏 fd） | 见左 |
+| **低** | `_sk_watchdog.py` | ① 自旋检测 `b.split("_")[0]` 对 `image3.png` 得 `image3.png`、对 `image3_crop.png` 得 `image3` ⇒ **原图与其派生件永不同组**，`image3a/b/c.png` 这类自旋也永不触发；② `--times 0` 不轮询即 `VERDICT=OK` exit 0；③ `os.makedirs(work)` 在 `out` 校验之前 | ① 用 `re.match(r"image\d+", b)` 取键；② 拒绝 `times<1`；③ 先校验 `out` |
+| **低** | `_sk_imgprep.py` | ① `--grid 84`（缺 `x`）抛裸 ValueError；② 卡片名用 `splitext(nm)[0]` ⇒ `a.png`/`a.jpg` 互相覆盖；③ WMF 缓存只按 stem 作键 ⇒ `image1.wmf`/`image1.emf` 共用一份 | 见左 |
+| **低** | `_sk0_baseline.py` | ① 归档日期检查是对整篇归档的**子串**匹配（任何无关处出现今日日期即静默通过），归档缺失时整项跳过，且 WARN 文案写 `_skill_archive.md` 而实际文件是 `_skill经验归档.md`；② 注释声称与 `_build_port.py` 同清单，但**全仓无此文件**（不变量不可验证）；③ `--write` 的"写后自证"是重读刚写的文件（只能发现写失败，不能发现写错） | 见左 |
+
+### d) 验证证据（本轮实测）
+
+| 项 | 实测 | 判定 |
+|---|---|---|
+| 编译自检 | 53 个 `*.py` 全量 `py_compile` ⇒ `compile_failures=0` | ✅ |
+| 一键体检 | `_chk_selftest.py` ⇒ `RESULT=ALL GREEN passed=6/6`（编译/基线/提示词/脱敏/守恒冒烟/信息表往返） | ✅ |
+| 基线指纹 | 改前 `SAME=21 CHANGED=12` → `--write` 重登记 → `SAME=33 CHANGED=0 MISSING=0 NEW=0` | ✅ |
+| **交付件回归** | 真实件「第一章测试卷」`audit.py` 复跑 ⇒ 仍 `FAILS: 无(全部通过)`（验证 images 容错改动未破坏判定） | ✅ |
+| **守恒回归** | 10 件真实成品 md 复跑 `_sk_balance.py` ⇒ 10/10 `exit=0`，且 `eq/bad/frag/unparsed` **逐件与改动前完全一致** | ✅ |
+| 表守卫三例 | 干净无新件→放行；**干净+1 新件→放行**（回归点）；备注含 `\|`→exit 6 且原文件字节不变 | ✅ |
+| `_target.txt` 第 3 行 | 写入哨兵 `SENTINEL-STEM-1234` → 跑 `sync` → 哨兵存活（修复前必被清空） | ✅ |
+| 进度三列回填 | 沙盒 sync ⇒ `queue=10 status=10 done_date=10 counts=10` | ✅ |
+| 真实台账复原 | 本轮误跑 `scan_input.py` 清掉的进度，已由修好的 `sync` 全量复原（`status/done_date/counts` 各 10） | ✅ |
+| 脱敏复扫 | `_chk_no_local_paths.py` ⇒ `FILES=59 HITS=0` | ✅ |
+| 提示词两版 | `IDENTICAL chars=2646 lines=41` | ✅ |
+
+### e) 给下一轮的提醒
+
+1. **收尾固定顺序已简化（U190 后）**：`status --set done` → 编辑信息表备注 → `sync`（**三列自动回填，不再需要按件回填脚本**）→ `_sk0_baseline.py` 复核。历史 U164/U168/U177 的"必须再跑一次回填"**作废**。
+2. **改库后必跑**：`python _chk_selftest.py`（须 `ALL GREEN`）。新增脚本也算漂移（U190 起 `NEW>0` 会使基线检查 exit 1），记得 `--write`。
+3. **库级待办已大幅细化**：见本节 c) 表——**下一轮若做 U35 回归，优先做"高"两条**（MATRIX 字节数、EQ 条件箭头丢槽），它们会**静默产出错公式**且现有判据全不覆盖。
+4. **评审方法可复用**：本轮"三路只读评审（生成链 / 解析链 / 工程工具）+ 每条附文件:行号与复现证据"的范式效率很高——**评审者必须被明确告知"只读、不改文件"**，否则会与主代理的并发编辑冲突（本轮评审者在报告里多次标注"文件正在被改写，行号对应某 md5"）。
+5. **注意并发编辑的代价**：评审期间主代理连续改写同一批文件，导致评审者给出多份快照 md5、且部分行号失效。**下一轮应先冻结代码再评审，或明确分区**。
 

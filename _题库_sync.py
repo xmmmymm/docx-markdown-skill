@@ -192,12 +192,15 @@ def classify(stem: str, txt: str, rel: Path):
     if len(topic) < 2:
         topic = sanitize_topic(strip_noise(head))
 
-    # 0) 「题型归类整理」目录：文件名前缀即题型序号，强制归入按题型归类
-    if any(part == "题型归类整理" for part in rel.parts):
+    # 0) 特殊子目录重定向（CHILD_SUB 为唯一真源，避免标记串散落两处）：
+    #    「题型归类整理」文件名前缀即题型序号，强制归入「按题型归类」
+    for marker, cmain, ccode, csub in CHILD_SUB:
+        if not any(part == marker for part in rel.parts):
+            continue
         if stem.startswith("00_"):
-            return "02_题型专题", "按题型归类", "TYPED", "总览与组卷建议", kps, chap
+            return cmain, csub, ccode, "总览与组卷建议", kps, chap
         if RE_TYPED.match(stem):
-            return "02_题型专题", "按题型归类", "TYPED", topic, kps, chap
+            return cmain, csub, ccode, topic, kps, chap
 
     # 1) 多元素综合专题（须先于单元素判定，否则「钠、氯」会被 NA 抢走）
     #    仅当**两个元素都出现**且不是单元素主导（标题以某元素起头）时才判综合

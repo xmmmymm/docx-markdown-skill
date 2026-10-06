@@ -83,4 +83,7 @@ for n in new:
 print("SAME=%d CHANGED=%d MISSING=%d NEW=%d" % (same, changed, missing, len(new)))
 for d in diffs:
     print(" ", d)
-sys.exit(0 if (changed == 0 and missing == 0) else 1)
+if new:
+    print("HINT: %d new script(s) not in fingerprint; run --write to register" % len(new))
+# NEW 也须计入失败：新增脚本若不入指纹，此后它被改坏就再也检测不出来
+sys.exit(0 if (changed == 0 and missing == 0 and not new) else 1)

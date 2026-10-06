@@ -125,6 +125,10 @@ while i < N:
         # 按裸 "|||" 切分: 行首/行尾空白已被 normalize 清除, 用带空格分隔符会错位
         cells = [[c.strip() if c.strip() != "<MERGE>" else "" for c in r.split("|||")]
                  for r in rows]
+        # 空表（<TBL> 紧跟 </TBL>）时 cells==[]，max() 会抛
+        # ValueError: max() arg is an empty sequence ⇒ 裸栈中断 S6
+        if not cells:
+            continue
         ncol = max(len(r) for r in cells)
         cells = [r + [""] * (ncol - len(r)) for r in cells]
         out = []
@@ -190,4 +194,4 @@ rep += ["DESC? missing: %d" % md.count("⟨DESC?"),
         "fig residual: %d" % md.count("⟨FIG"),
         "=(=( residual: %d" % md.count("=(=(")]
 (BASE / "make_md_report.txt").write_text("\n".join(rep), encoding="utf-8")
-print("md written:", MD_OUT.name)
+print("md written:", MD_OUT.name.encode("ascii", "replace").decode("ascii"))

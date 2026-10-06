@@ -52,24 +52,33 @@ def scan(in_root, out_root):
 
 
 def write_queue(payload):
-    """写 <skill 根>\\_队列\\queue.json（返回路径）。"""
+    """写 <skill 根>\\_队列\\queue.json（返回路径）。
+
+    原子写（临时文件 + os.replace）：本文件是「开工第 1 步读进度」的对象，
+    而非原子重写会让并发/紧随其后的读者读到半截 JSON（U184「sync 后复读」场景）。
+    """
     QUEUE_DIR.mkdir(exist_ok=True)
     qp = QUEUE_DIR / "queue.json"
-    qp.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp = qp.with_name(qp.name + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(str(tmp), str(qp))
     return qp
 
 
 def main():
     raw = os.environ.get("SKILL_TARGET", "")
     if raw:
-        parts = [p for p in raw.split("\t") if p.strip()]
+        # **保位**（空字段留 None）：SKILL_TARGET="in\t\tstem" 时若过滤掉空字段，
+        # stem 会被挤到 out_root 位、所有 out_abs 全错；_sk_info.target_lines() 是
+        # 保位的，两个工具对同一个变量必须同口径。
+        parts = [p.strip() or None for p in raw.split("\t")]
     else:
         if not (TPL / "_target.txt").exists():
             sys.stderr.write("BAD _target.txt: missing (in _templates)\n")
             sys.exit(2)
         parts = [ln.strip() for ln in (TPL / "_target.txt").read_text(encoding="utf-8").splitlines()
                  if ln.strip() and not ln.lstrip().startswith("#")]
-    if len(parts) < 2:
+    if len(parts) < 2 or not parts[0] or not parts[1]:
         sys.stderr.write("BAD _target.txt: need 2 non-comment lines (input / output-root)\n")
         sys.exit(2)
     in_root, out_root = Path(parts[0]), Path(parts[1])
@@ -82,7 +91,9 @@ def main():
     print("QUEUE n=%d skipped=%d out=_queue/queue.json"
           % (len(payload["queue"]), len(payload["skipped"])))
     for it in payload["queue"]:
-        print("  q%-2d %8d B  %s" % (it["queue"], it["size"], it["stem"]))
+        # stem 是中文（U2/U90：stdout 只打 ASCII，中文详情看 UTF-8 的 queue.json）
+        print("  q%-2d %8d B  %s" % (it["queue"], it["size"],
+                                     it["stem"].encode("ascii", "replace").decode("ascii")))
 
 
 if __name__ == "__main__":

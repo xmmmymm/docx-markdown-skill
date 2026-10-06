@@ -90,11 +90,15 @@ report["3_表格"] = {"md表数": len(tables), "源表数": src_tbls, "列一致
 # 4 图片三一致
 refs = re.findall(r"!\[\]\(images/([^)]+)\)", md)
 figdesc = re.findall(r"!\[\]\(images/[^)]+\)〔图：([^〕]+)〕", md)
-files = sorted(os.listdir(DST / "images"))
+# images\ 缺失时不可直接 listdir（旧版会抛 FileNotFoundError 裸栈中断，
+# 使"图全丢"这种最该报 FAILS 的情形反而拿不到报告）⇒ 退化为空列表，自然判 FAILS。
+_IMGDIR = DST / "images"
+files = sorted(os.listdir(_IMGDIR)) if _IMGDIR.is_dir() else []
 report["4_图片"] = {"引用处数": len(refs), "唯一引用": len(set(refs)), "文件数": len(files),
-                    "带描述数": len(figdesc),
+                    "带描述数": len(figdesc), "images目录": "ok" if _IMGDIR.is_dir() else "MISSING",
                     "文件==唯一引用": sorted(set(refs)) == files,
-                    "PASS": sorted(set(refs)) == files and len(figdesc) == len(refs)}
+                    "PASS": _IMGDIR.is_dir() and sorted(set(refs)) == files
+                            and len(figdesc) == len(refs)}
 
 # 5 内容保持
 def norm_md(t):

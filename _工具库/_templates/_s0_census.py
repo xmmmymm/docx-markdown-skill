@@ -9,7 +9,8 @@ W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 M = 'http://schemas.openxmlformats.org/officeDocument/2006/math'
 R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
-V = 'urn:schemas-microsoft-com:vml'
+# 注：VML 命名空间常量曾在此定义但从未被引用（v:imagedata 走下面的正则计数），
+# 已删以免误导「普查覆盖了 VML 的 ET 分支」。
 
 
 def q(ns, t):

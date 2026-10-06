@@ -110,6 +110,11 @@ def _base_render(el):
 
 
 def render(el):
+    # 畸形/缺失子元素时各调用点传进来的是 None（_e() 找不到即返回 None）。
+    # 无此守卫会 AttributeError 冒泡到 extract_content 的模块级循环（那里无 try），
+    # 整个 S2 在写 content_stream.txt 之前就中断。
+    if el is None:
+        return ""
     t = el.tag
     if t in (M + "oMath", M + "oMathPara"):
         return "".join(render(c) for c in el)

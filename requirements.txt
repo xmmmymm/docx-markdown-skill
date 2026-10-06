@@ -1,0 +1,18 @@
+# 试题提取 skill · 运行期依赖
+#   安装：pip install -r requirements.txt
+# 全流程离线运行，不上传任何试卷内容。
+#
+# 另需（非 pip 包）：
+#   · LibreOffice —— WMF/EMF→PNG、docx→PDF 交叉验证
+#     默认查找 C:\Program Files\LibreOffice\program\soffice.exe
+#     （_sk_imgprep.py 带 x86 回退；_templates\_sk12_pages.py 同）
+#   · Python 3.9+（开发与实测环境 3.13 / 3.14）
+
+# MathType OLE 复合文档读取（mtef_render.py / probe_ole.py）
+olefile>=0.46
+
+# 图片白底合成、放大、像素级空白判定（prep_images / check_blank / copy_images / zoom_*）
+Pillow>=9.0
+
+# PDF 文本层抽取与高倍裁切目验（_templates/_sk12_pages.py / _sk12_layout.py / render_ole_fig.py）
+PyMuPDF>=1.23

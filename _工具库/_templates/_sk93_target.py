@@ -78,6 +78,9 @@ def tool(name=None):
     return TOOL / name if name else TOOL
 
 
+# 注：以下三个取值器是**对外 API**，供各驱动脚本 import 调用，
+# 库内自身不引用它们 ⇒ 静态体检（_audit_static.py）会把它们报成"定义未用"，
+# 属**预期误报**，勿删（删了驱动脚本会 AttributeError）。
 def skillroot():
     """skill 工程根（_skill规划.md、_队列\\ 等所在）"""
     return SKILLROOT

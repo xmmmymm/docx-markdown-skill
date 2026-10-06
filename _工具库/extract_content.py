@@ -544,8 +544,13 @@ meta["ole_ref_count"] = len(ole_refs)
 # media/embeddings 目录可能不存在（零 OLE 的文档根本没有 word/embeddings），必须容错
 media_dir = UNP / "word/media"
 media_all = sorted(p.name for p in media_dir.iterdir()) if media_dir.exists() else []
+# word/embeddings 里除 oleObjectN.bin 外还可能出现嵌入式工作簿（如
+# Microsoft_Excel_Worksheet1.xlsx）或子目录 ⇒ 先按名前缀过滤再取序号，
+# 否则 int(s[9:]) 会 ValueError 裸栈（S2 在写 content_stream 之前就挂）。
 emb_dir = UNP / "word/embeddings"
-emb_all = sorted((p.name[:-4] for p in emb_dir.iterdir()), key=lambda s: int(s[9:])) if emb_dir.exists() else []
+emb_all = sorted((p.name[:-4] for p in emb_dir.iterdir()
+                  if p.is_file() and p.name.startswith("oleObject") and p.name.endswith(".bin")),
+                 key=lambda s: int(s[9:])) if emb_dir.exists() else []
 meta["media_all"] = media_all
 meta["emb_all_count"] = len(emb_all)
 meta["ole_all"] = emb_all
@@ -559,6 +564,6 @@ print("image refs:", meta["image_ref_count"], "unique:", len(meta["images"]))
 print("ole refs:", meta["ole_ref_count"], "unique:", len(meta["oles"]), "emb files:", len(emb_all))
 print("orphan media:", meta["orphan_media"])
 print("missing ole:", meta["missing_ole"][:10])
-print("eqraw:", meta["eqraw"])
+print("eqraw:", ascii(meta["eqraw"]))
 print("omml_total:", meta["omml_total"])
 print("AL residual:", stream.count("\u27e8AL"))
