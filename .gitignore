@@ -1,0 +1,38 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# ── 交付中间产物 / 运行期日志 ──────────────────────────────────────
+# 本 skill 每件的 work\ 目录是「解包 + 脚本副本 + 报告」，体量大且可重跑，
+# 不入库；规则与 <输出根>\<stem>\ 交付结构见 _skill规划.md 第一节。
+# ── 运行期自检报告（每次开工/收尾重跑，内容含本机路径，不必入库）────
+_工具库/_sk_info_check.txt
+_工具库/_u35_omml.txt
+_工具库/docx_list.json
+# 三要素里的本机输入/输出路径（每批次 sync 自动重写；见 _工具库/_templates/README.md）
+_工具库/_templates/_target.txt
+# 批次台账：scan_input.py / _sk_info.py sync 的**产物**（含各件绝对路径），
+# 非源文件——凭 <输入夹>\_提取信息.md 随时重建，详见 README「开发」。
+_队列/queue.json
+*.log
+_sk93_setup*.txt
+
+# ── 编辑器 / 操作系统 ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ── 注意：以下**不要**忽略 ──────────────────────────────────────────
+# _基线指纹.json   CORE 脚本 MD5 指纹（漂移检测依据，删则 U35 回归失去基线）
+# _skill规划.md / _skill经验归档.md  经验真源与总纲（派生物须可由其重建）
